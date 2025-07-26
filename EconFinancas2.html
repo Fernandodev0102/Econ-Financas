@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Gastos Pessoais</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Variáveis CSS para o tema escuro (ajustadas para tons de cinza) */
+        :root {
+            --background-color: #121212; /* Quase preto */
+            --card-background: #1e1e1e; /* Cinza escuro para cartões */
+            --text-color: #f0f0f0; /* Off-white para texto */
+            --primary-color: #424242; /* Cinza médio para botões principais */
+            --accent-color: #f0f0f0; /* Off-white para títulos e destaque */
+            --border-color: #2c2c2c; /* Cinza muito escuro para bordas */
+            --input-background: #2c2c2c; /* Cinza muito escuro para inputs */
+            --button-hover-background: #616161; /* Cinza mais claro para hover de botões */
+            --delete-button-color: #5c5c5c; /* Cinza escuro para botão de excluir */
+            --edit-button-color: #7a7a7a; /* Cinza médio para botão de editar */
+            --success-color: #28a745; /* Verde para sucesso (mantido para feedback claro) */
+            --error-color: #dc3545; /* Vermelho para erro (mantido para feedback claro) */
+            --info-color: #17a2b8; /* Azul para informação (mantido para feedback claro) */
+        }
+
+        /* Estilos globais */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        h1, h2, h3 {
+            color: var(--accent-color);
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            display: grid;
+            gap: 20px;
+            grid-template-columns: 1fr; /* Padrão para mobile */
+        }
+
+        @media (min-width: 768px) {
+            .container {
+                grid-template-columns: 1fr 2fr; /* Layout em duas colunas para desktop */
+            }
+        }
+
+        .card {
+            background-color: var(--card-background);
+            border-radius: 12px;
+            padding: 25px;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        /* Formulários e Inputs */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        input[type="text"],
+        input[type="number"],
+        input[type="date"],
+        select,
+        textarea {
+            width: calc(100% - 20px);
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--input-background);
+            color: var(--text-color);
+            font-size: 1rem;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        input[type="date"]:focus,
+        select:focus,
+        textarea:focus {
+            border-color: var(--accent-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(240, 240, 240, 0.3); /* Sombra de foco em cinza claro */
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        /* Botões */
+        button {
+            background-color: var(--primary-color);
+            color: var(--text-color);
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        button:hover {
+            background-color: var(--button-hover-background);
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn-group button {
+            flex-grow: 1;
+            min-width: 120px; /* Garante que os botões não fiquem muito pequenos */
+        }
+
+        .btn-edit {
+            background-color: var(--edit-button-color); /* Usando a nova cor cinza */
+        }
+
+        .btn-delete {
+            background-color: var(--delete-button-color); /* Usando a nova cor cinza */
+        }
+
+        .btn-edit:hover {
+            background-color: #8a8a8a; /* Um pouco mais claro no hover */
+        }
+
+        .btn-delete:hover {
+            background-color: #6d6d6d; /* Um pouco mais claro no hover */
+        }
+
+        /* Tabela de Gastos */
+        .expense-list-section {
+            overflow-x: auto; /* Permite rolagem horizontal em telas pequenas */
+        }
+
+        .expense-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            min-width: 600px; /* Garante que a tabela não encolha demais */
+        }
+
+        .expense-table th,
+        .expense-table td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .expense-table th {
+            background-color: var(--primary-color); /* Usando cinza escuro */
+            font-weight: 700;
+            color: var(--text-color);
+            position: sticky; /* Fixa o cabeçalho ao rolar */
+            top: 0;
+        }
+
+        .expense-table tbody tr:nth-child(even) {
+            background-color: rgba(255, 255, 255, 0.05); /* Um toque de cinza claro para linhas pares */
+        }
+
+        .expense-table tbody tr:hover {
+            background-color: rgba(240, 240, 240, 0.1); /* Hover sutil em cinza claro */
+        }
+
+        .expense-table td:last-child {
+            white-space: nowrap; /* Evita que os botões quebrem a linha */
+        }
+
+        /* Mensagens de Feedback */
+        #feedback-message {
+            background-color: var(--info-color);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+            visibility: hidden;
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        #feedback-message.show {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Seção de Categorias (ajustes de espaçamento) */
+        .category-management {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .category-list {
+            list-style: none;
+            padding: 0;
+            max-height: 250px; /* Aumentado um pouco a altura máxima */
+            overflow-y: auto; /* Adiciona rolagem se muitas categorias */
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background-color: var(--input-background);
+        }
+
+        .category-list li {
+            padding: 12px 18px; /* Aumentado o padding para mais espaço */
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px; /* Espaçamento entre o texto e os botões */
+        }
+
+        .category-list li:last-child {
+            border-bottom: none;
+        }
+
+        .category-list li span {
+            flex-grow: 1;
+            font-weight: 500;
+            white-space: nowrap; /* Evita quebra de linha para nomes de categoria */
+            overflow: hidden; /* Esconde o excesso de texto */
+            text-overflow: ellipsis; /* Adiciona reticências se o texto for muito longo */
+        }
+
+        .category-list li div { /* Container dos botões */
+            display: flex;
+            gap: 8px; /* Espaçamento entre os botões de ação */
+        }
+
+        /* Gráfico de Resumo */
+        .chart-section {
+            margin-top: 20px;
+        }
+
+        .chart-summary {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: var(--input-background);
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .chart-summary h3 {
+            margin: 0;
+            color: var(--accent-color);
+        }
+
+        .chart-summary p {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text-color);
+        }
+
+        .chart-bars {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .chart-bar-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chart-bar-label {
+            min-width: 100px;
+            font-weight: 600;
+            color: var(--text-color);
+        }
+
+        .chart-bar-container {
+            flex-grow: 1;
+            background-color: var(--input-background);
+            border-radius: 5px;
+            height: 25px;
+            overflow: hidden; /* Mantém o overflow hidden para a barra em si */
+            position: relative; /* Importante para o posicionamento absoluto do texto */
+        }
+
+        .chart-bar {
+            height: 100%;
+            background-color: var(--primary-color); /* Cor padrão, será sobrescrita */
+            width: 0%;
+            transition: width 0.8s ease-out;
+            border-radius: 5px;
+            position: absolute; /* Posição relativa ao container */
+            top: 0;
+            left: 0;
+        }
+
+        .chart-bar-overlay-text { /* Novo estilo para o texto sobreposto à barra */
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%); /* Centraliza horizontal e verticalmente */
+            color: var(--text-color);
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            white-space: nowrap; /* Evita quebra de linha */
+            z-index: 2; /* Garante que o texto fique acima da barra */
+            padding: 0 5px; /* Pequeno preenchimento para evitar que o texto toque as bordas */
+            box-sizing: border-box;
+            width: 100%; /* Permite que o texto ocupe toda a largura do container para centralização */
+            text-align: center; /* Centraliza o texto dentro do seu próprio span */
+        }
+
+        .chart-legend {
+            margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+        }
+
+        .legend-color-box {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            border: 1px solid var(--border-color);
+        }
+
+        /* Modal de Confirmação */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 1001; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.7); /* Black w/ opacity */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            pointer-events: none; /* Allows clicks through when hidden */
+        }
+
+        .modal.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background-color: var(--card-background);
+            margin: auto;
+            padding: 30px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+            transform: translateY(-20px);
+            transition: transform 0.3s ease-in-out;
+        }
+
+        .modal.show .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal-content h3 {
+            color: var(--accent-color);
+            margin-bottom: 20px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 25px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+            max-width: 150px;
+        }
+
+        .modal-buttons .btn-cancel {
+            background-color: #6c757d; /* Cinza para cancelar */
+        }
+
+        .modal-buttons .btn-cancel:hover {
+            background-color: #5a6268;
+        }
+
+        /* Filtros */
+        .filter-section {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        @media (min-width: 600px) {
+            .filter-section {
+                grid-template-columns: 1fr 1fr auto;
+            }
+        }
+
+        /* Botão de zerar dados */
+        .reset-data-button {
+            background-color: var(--delete-button-color); /* Usando a nova cor cinza */
+            margin-top: 20px;
+        }
+        .reset-data-button:hover {
+            background-color: #6d6d6d; /* Um pouco mais claro no hover */
+        }
+    </style>
+</head>
+<body>
+    <div id="feedback-message"></div>
+
+    <h1>Gerenciador de Gastos Pessoais</h1>
+
+    <div class="container">
+        <!-- Coluna Esquerda: Registro de Gastos e Gerenciamento de Categorias -->
+        <div class="left-column">
+            <section class="card">
+                <h2>Registrar Novo Gasto</h2>
+                <form id="expense-form">
+                    <input type="hidden" id="expense-id">
+                    <div class="form-group">
+                        <label for="expense-value">Valor (R$):</label>
+                        <input type="number" id="expense-value" placeholder="Ex: 50.25" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="expense-date">Data:</label>
+                        <input type="date" id="expense-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="expense-category">Categoria:</label>
+                        <select id="expense-category" required>
+                            <!-- Categorias serão carregadas via JS -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="expense-description">Descrição:</label>
+                        <textarea id="expense-description" placeholder="Ex: Almoço no restaurante X"></textarea>
+                    </div>
+                    <button type="submit" id="save-expense-btn">Salvar Gasto</button>
+                </form>
+            </section>
+
+            <section class="card category-management">
+                <h2>Gerenciar Categorias</h2>
+                <div class="form-group">
+                    <label for="new-category-name">Nova Categoria:</label>
+                    <input type="text" id="new-category-name" placeholder="Nome da categoria">
+                </div>
+                <div class="btn-group">
+                    <button id="add-category-btn">Adicionar Categoria</button>
+                </div>
+
+                <h3>Minhas Categorias</h3>
+                <ul id="category-list" class="category-list">
+                    <!-- Categorias serão carregadas via JS -->
+                </ul>
+            </section>
+        </div>
+
+        <!-- Coluna Direita: Listagem de Gastos e Gráfico Resumo -->
+        <div class="right-column">
+            <section class="card expense-list-section">
+                <h2>Meus Gastos</h2>
+
+                <div class="filter-section">
+                    <div class="form-group">
+                        <label for="filter-category">Filtrar por Categoria:</label>
+                        <select id="filter-category">
+                            <option value="">Todas</option>
+                            <!-- Categorias serão carregadas via JS -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="filter-date">Filtrar por Data:</label>
+                        <input type="date" id="filter-date">
+                    </div>
+                    <button id="clear-filters-btn">Limpar Filtros</button>
+                </div>
+
+                <div style="max-height: 400px; overflow-y: auto;">
+                    <table class="expense-table">
+                        <thead>
+                            <tr>
+                                <th>Valor</th>
+                                <th>Data</th>
+                                <th>Categoria</th>
+                                <th>Descrição</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="expense-table-body">
+                            <!-- Gastos serão carregados via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="card chart-section">
+                <h2>Resumo dos Gastos</h2>
+                <div class="chart-summary">
+                    <h3>Total Geral:</h3>
+                    <p id="total-expenses">R$ 0,00</p>
+                </div>
+                <div id="chart-bars" class="chart-bars">
+                    <!-- Barras do gráfico serão carregadas via JS -->
+                </div>
+                <div id="chart-legend" class="chart-legend">
+                    <!-- Legenda do gráfico será carregada via JS -->
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <button id="reset-data-btn" class="reset-data-button">Zerar Todos os Dados</button>
+
+    <!-- Modal de Confirmação -->
+    <div id="confirmation-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="modal-title">Confirmação</h3>
+            <p id="modal-message">Você tem certeza?</p>
+            <div class="modal-buttons">
+                <button id="modal-confirm-btn">Confirmar</button>
+                <button id="modal-cancel-btn" class="btn-cancel">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- Variáveis Globais e Inicialização ---
+        let expenses = []; // Array para armazenar os gastos
+        let categories = ['Alimentação', 'Transporte', 'Lazer', 'Moradia', 'Saúde', 'Educação', 'Outros']; // Categorias padrão
+        const DEFAULT_CATEGORY = 'Outros'; // Categoria padrão para realocação
+
+        // Elementos do DOM
+        const expenseForm = document.getElementById('expense-form');
+        const expenseIdInput = document.getElementById('expense-id');
+        const expenseValueInput = document.getElementById('expense-value');
+        const expenseDateInput = document.getElementById('expense-date');
+        const expenseCategorySelect = document.getElementById('expense-category');
+        const expenseDescriptionInput = document.getElementById('expense-description');
+        const saveExpenseBtn = document.getElementById('save-expense-btn');
+        const expenseTableBody = document.getElementById('expense-table-body');
+        const feedbackMessage = document.getElementById('feedback-message');
+
+        const newCategoryNameInput = document.getElementById('new-category-name');
+        const addCategoryBtn = document.getElementById('add-category-btn');
+        const categoryListUl = document.getElementById('category-list');
+
+        const totalExpensesDisplay = document.getElementById('total-expenses');
+        const chartBarsDiv = document.getElementById('chart-bars');
+        const chartLegendDiv = document.getElementById('chart-legend');
+
+        const filterCategorySelect = document.getElementById('filter-category');
+        const filterDateInput = document.getElementById('filter-date');
+        const clearFiltersBtn = document.getElementById('clear-filters-btn');
+
+        const resetDataBtn = document.getElementById('reset-data-btn');
+
+        // Modal de Confirmação
+        const confirmationModal = document.getElementById('confirmation-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const modalConfirmBtn = document.getElementById('modal-confirm-btn');
+        const modalCancelBtn = document.getElementById('modal-cancel-btn');
+
+        let currentConfirmAction = null; // Função a ser executada na confirmação do modal
+
+        // --- Funções de Utilitário ---
+
+        /**
+         * Gera um UUID (Universally Unique Identifier) simples.
+         * @returns {string} Um UUID único.
+         */
+        function generateUUID() {
+            return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+        }
+
+        /**
+         * Formata um valor numérico para o formato de moeda Real (R$).
+         * @param {number} value - O valor a ser formatado.
+         * @returns {string} O valor formatado como string.
+         */
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }).format(value);
+        }
+
+        /**
+         * Formata uma data para o formato DD/MM/AAAA.
+         * @param {string} dateString - A string da data no formato YYYY-MM-DD.
+         * @returns {string} A data formatada como string.
+         */
+        function formatDate(dateString) {
+            const [year, month, day] = dateString.split('-');
+            return `${day}/${month}/${year}`;
+        }
+
+        /**
+         * Exibe uma mensagem de feedback na tela.
+         * @param {string} message - A mensagem a ser exibida.
+         * @param {string} type - O tipo da mensagem (success, error, info).
+         */
+        function showFeedback(message, type = 'info') {
+            feedbackMessage.textContent = message;
+            feedbackMessage.className = `show ${type}`; // Adiciona a classe 'show' e o tipo
+            feedbackMessage.style.backgroundColor = `var(--${type}-color)`; // Define a cor de fundo
+            setTimeout(() => {
+                feedbackMessage.className = ''; // Remove as classes para esconder
+            }, 3000); // Esconde após 3 segundos
+        }
+
+        /**
+         * Gera uma cor hexadecimal aleatória.
+         * @returns {string} Uma string de cor hexadecimal (ex: "#RRGGBB").
+         */
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        /**
+         * Exibe o modal de confirmação.
+         * @param {string} title - Título do modal.
+         * @param {string} message - Mensagem do modal.
+         * @param {Function} onConfirm - Função a ser executada se o usuário confirmar.
+         */
+        function showConfirmationModal(title, message, onConfirm) {
+            modalTitle.innerHTML = title; // Use innerHTML para permitir tags HTML na mensagem
+            modalMessage.innerHTML = message; // Use innerHTML para permitir tags HTML na mensagem
+            currentConfirmAction = onConfirm; // Armazena a função para ser chamada na confirmação
+            confirmationModal.classList.add('show');
+        }
+
+        /**
+         * Esconde o modal de confirmação.
+         */
+        function hideConfirmationModal() {
+            confirmationModal.classList.remove('show');
+            currentConfirmAction = null; // Limpa a função
+        }
+
+        // --- Funções de Armazenamento de Dados (localStorage) ---
+
+        /**
+         * Carrega os dados de gastos e categorias do localStorage.
+         */
+        function loadData() {
+            const storedExpenses = localStorage.getItem('expenses');
+            const storedCategories = localStorage.getItem('categories');
+
+            if (storedExpenses) {
+                expenses = JSON.parse(storedExpenses);
+            }
+            if (storedCategories) {
+                categories = JSON.parse(storedCategories);
+            }
+            // Garante que a categoria padrão "Outros" sempre exista
+            if (!categories.includes(DEFAULT_CATEGORY)) {
+                categories.push(DEFAULT_CATEGORY);
+                saveCategories();
+            }
+        }
+
+        /**
+         * Salva os gastos no localStorage.
+         */
+        function saveExpenses() {
+            localStorage.setItem('expenses', JSON.stringify(expenses));
+        }
+
+        /**
+         * Salva as categorias no localStorage.
+         */
+        function saveCategories() {
+            localStorage.setItem('categories', JSON.stringify(categories));
+        }
+
+        // --- Funções de Gerenciamento de Gastos ---
+
+        /**
+         * Adiciona ou edita um gasto.
+         * @param {Event} event - O evento de submit do formulário.
+         */
+        function addOrUpdateExpense(event) {
+            event.preventDefault();
+
+            const id = expenseIdInput.value;
+            const value = parseFloat(expenseValueInput.value);
+            const date = expenseDateInput.value;
+            const category = expenseCategorySelect.value;
+            const description = expenseDescriptionInput.value.trim();
+
+            if (isNaN(value) || value <= 0) {
+                showFeedback('Por favor, insira um valor válido para o gasto.', 'error');
+                return;
+            }
+            if (!date) {
+                showFeedback('Por favor, selecione uma data para o gasto.', 'error');
+                return;
+            }
+            if (!category) {
+                showFeedback('Por favor, selecione uma categoria para o gasto.', 'error');
+                return;
+            }
+
+            if (id) {
+                // Editar gasto existente
+                const expenseIndex = expenses.findIndex(exp => exp.id === id);
+                if (expenseIndex !== -1) {
+                    expenses[expenseIndex] = { id, value, date, category, description };
+                    showFeedback('Gasto atualizado com sucesso!', 'success');
+                }
+            } else {
+                // Adicionar novo gasto
+                const newExpense = {
+                    id: generateUUID(),
+                    value,
+                    date,
+                    category,
+                    description
+                };
+                expenses.push(newExpense);
+                showFeedback('Gasto adicionado com sucesso!', 'success');
+            }
+
+            saveExpenses();
+            renderExpenses(); // Renderiza a lista de gastos com os filtros aplicados
+            renderChart();
+            expenseForm.reset(); // Limpa o formulário
+            expenseIdInput.value = ''; // Limpa o ID para garantir que o próximo seja um novo gasto
+            saveExpenseBtn.textContent = 'Salvar Gasto'; // Volta o texto do botão para "Salvar Gasto"
+        }
+
+        /**
+         * Preenche o formulário de gastos para edição.
+         * @param {string} id - O ID do gasto a ser editado.
+         */
+        function editExpense(id) {
+            const expense = expenses.find(exp => exp.id === id);
+            if (expense) {
+                expenseIdInput.value = expense.id;
+                expenseValueInput.value = expense.value;
+                expenseDateInput.value = expense.date;
+                expenseCategorySelect.value = expense.category;
+                expenseDescriptionInput.value = expense.description;
+                saveExpenseBtn.textContent = 'Atualizar Gasto';
+                window.scrollTo({ top: 0, behavior: 'smooth' }); // Rola para o topo para o formulário
+            }
+        }
+
+        /**
+         * Exclui um gasto.
+         * @param {string} id - O ID do gasto a ser excluído.
+         */
+        function deleteExpense(id) {
+            showConfirmationModal(
+                'Confirmar Exclusão',
+                'Tem certeza que deseja excluir este gasto?',
+                () => {
+                    expenses = expenses.filter(exp => exp.id !== id);
+                    saveExpenses();
+                    renderExpenses(); // Renderiza a lista de gastos com os filtros aplicados
+                    renderChart();
+                    showFeedback('Gasto excluído com sucesso!', 'success');
+                    hideConfirmationModal();
+                }
+            );
+        }
+
+        /**
+         * Renderiza a lista de gastos na tabela, aplicando filtros se houver.
+         */
+        function renderExpenses() {
+            expenseTableBody.innerHTML = ''; // Limpa a tabela
+
+            const filterCategory = filterCategorySelect.value;
+            const filterDate = filterDateInput.value;
+
+            const filteredExpenses = expenses.filter(expense => {
+                const matchesCategory = filterCategory === '' || expense.category === filterCategory;
+                const matchesDate = filterDate === '' || expense.date === filterDate;
+                return matchesCategory && matchesDate;
+            }).sort((a, b) => new Date(b.date) - new Date(a.date)); // Ordena por data mais recente
+
+            if (filteredExpenses.length === 0) {
+                const row = expenseTableBody.insertRow();
+                const cell = row.insertCell();
+                cell.colSpan = 5;
+                cell.textContent = 'Nenhum gasto encontrado.';
+                cell.style.textAlign = 'center';
+                cell.style.padding = '20px';
+                return;
+            }
+
+            filteredExpenses.forEach(expense => {
+                const row = expenseTableBody.insertRow();
+                row.innerHTML = `
+                    <td>${formatCurrency(expense.value)}</td>
+                    <td>${formatDate(expense.date)}</td>
+                    <td>${expense.category}</td>
+                    <td>${expense.description || '-'}</td>
+                    <td>
+                        <button class="btn-edit" onclick="editExpense('${expense.id}')">Editar</button>
+                        <button class="btn-delete" onclick="deleteExpense('${expense.id}')">Excluir</button>
+                    </td>
+                `;
+            });
+        }
+
+        // --- Funções de Gerenciamento de Categorias ---
+
+        /**
+         * Adiciona uma nova categoria.
+         */
+        function addCategory() {
+            const newCategory = newCategoryNameInput.value.trim();
+            if (newCategory && !categories.includes(newCategory)) {
+                categories.push(newCategory);
+                saveCategories();
+                renderCategories();
+                showFeedback(`Categoria "${newCategory}" adicionada!`, 'success');
+                newCategoryNameInput.value = '';
+            } else if (categories.includes(newCategory)) {
+                showFeedback('Essa categoria já existe.', 'info');
+            } else {
+                showFeedback('Por favor, insira um nome para a categoria.', 'error');
+            }
+        }
+
+        /**
+         * Renomeia uma categoria existente.
+         * @param {string} oldName - O nome antigo da categoria.
+         * @param {string} newName - O novo nome da categoria.
+         */
+        function renameCategory(oldName, newName) {
+            if (oldName === newName) return; // Não faz nada se o nome não mudou
+
+            if (categories.includes(newName)) {
+                showFeedback('Já existe uma categoria com esse nome.', 'error');
+                return;
+            }
+
+            const categoryIndex = categories.indexOf(oldName);
+            if (categoryIndex !== -1) {
+                categories[categoryIndex] = newName;
+                // Atualiza os gastos com a nova categoria
+                expenses.forEach(expense => {
+                    if (expense.category === oldName) {
+                        expense.category = newName;
+                    }
+                });
+                saveCategories();
+                saveExpenses();
+                renderCategories();
+                renderExpenses();
+                renderChart();
+                showFeedback(`Categoria "${oldName}" renomeada para "${newName}"!`, 'success');
+            }
+        }
+
+        /**
+         * Exclui uma categoria. Gastos associados são realocados para a categoria padrão.
+         * @param {string} categoryToDelete - O nome da categoria a ser excluída.
+         */
+        function deleteCategory(categoryToDelete) {
+            if (categoryToDelete === DEFAULT_CATEGORY) {
+                showFeedback(`A categoria "${DEFAULT_CATEGORY}" não pode ser excluída.`, 'error');
+                return;
+            }
+
+            showConfirmationModal(
+                'Confirmar Exclusão de Categoria',
+                `Tem certeza que deseja excluir a categoria "${categoryToDelete}"? Os gastos associados serão movidos para "${DEFAULT_CATEGORY}".`,
+                () => {
+                    categories = categories.filter(cat => cat !== categoryToDelete);
+                    // Realoca gastos da categoria excluída para a categoria padrão
+                    expenses.forEach(expense => {
+                        if (expense.category === categoryToDelete) {
+                            expense.category = DEFAULT_CATEGORY;
+                        }
+                    });
+                    saveCategories();
+                    saveExpenses();
+                    renderCategories();
+                    renderExpenses();
+                    renderChart();
+                    showFeedback(`Categoria "${categoryToDelete}" excluída e gastos realocados para "${DEFAULT_CATEGORY}".`, 'success');
+                    hideConfirmationModal();
+                }
+            );
+        }
+
+        /**
+         * Renderiza a lista de categorias e preenche os selects de categoria.
+         */
+        function renderCategories() {
+            // Limpa as listas e selects existentes
+            categoryListUl.innerHTML = '';
+            expenseCategorySelect.innerHTML = '';
+            filterCategorySelect.innerHTML = '<option value="">Todas</option>'; // Adiciona opção "Todas" para o filtro
+
+            categories.forEach(category => {
+                // Adiciona ao select de registro de gastos
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                expenseCategorySelect.appendChild(option);
+
+                // Adiciona ao select de filtro
+                const filterOption = document.createElement('option');
+                filterOption.value = category;
+                filterOption.textContent = category;
+                filterCategorySelect.appendChild(filterOption);
+
+                // Adiciona à lista de gerenciamento de categorias
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span>${category}</span>
+                    <div>
+                        <button class="btn-edit" onclick="promptRenameCategory('${category}')">Renomear</button>
+                        <button class="btn-delete" onclick="deleteCategory('${category}')">Excluir</button>
+                    </div>
+                `;
+                if (category === DEFAULT_CATEGORY) {
+                    // Desabilita botões de renomear/excluir para a categoria padrão
+                    li.querySelector('.btn-edit').disabled = true;
+                    li.querySelector('.btn-delete').disabled = true;
+                    li.querySelector('.btn-edit').style.opacity = '0.5';
+                    li.querySelector('.btn-delete').style.opacity = '0.5';
+                    li.querySelector('.btn-edit').style.cursor = 'not-allowed';
+                    li.querySelector('.btn-delete').style.cursor = 'not-allowed';
+                }
+                categoryListUl.appendChild(li);
+            });
+        }
+
+        /**
+         * Solicita ao usuário um novo nome para a categoria.
+         * @param {string} oldName - O nome atual da categoria.
+         */
+        function promptRenameCategory(oldName) {
+            showConfirmationModal(
+                'Renomear Categoria',
+                `Insira o novo nome para "${oldName}":<br><input type="text" id="new-category-input" value="${oldName}" style="margin-top: 10px; width: calc(100% - 24px);">`,
+                () => {
+                    const newNameInput = document.getElementById('new-category-input');
+                    const newName = newNameInput.value.trim();
+                    if (newName) {
+                        renameCategory(oldName, newName);
+                    } else {
+                        showFeedback('O novo nome da categoria não pode ser vazio.', 'error');
+                    }
+                    hideConfirmationModal();
+                }
+            );
+        }
+
+        // --- Funções de Gráfico e Resumo ---
+
+        /**
+         * Gera uma cor hexadecimal aleatória.
+         * Garante que seja distinta das cores já usadas para melhor visualização no gráfico.
+         * @param {Array<string>} existingColors - Array de cores já em uso.
+         * @returns {string} Uma nova string de cor hexadecimal (ex: "#RRGGBB").
+         */
+        function generateDistinctColor(existingColors) {
+            let newColor;
+            let attempts = 0;
+            // Tenta gerar uma cor que não seja muito escura para se destacar no tema escuro
+            // e que seja diferente das cores já existentes.
+            do {
+                newColor = getRandomColor();
+                // Verifica a luminosidade da cor para evitar tons muito escuros
+                const r = parseInt(newColor.substring(1, 3), 16);
+                const g = parseInt(newColor.substring(3, 5), 16);
+                const b = parseInt(newColor.substring(5, 7), 16);
+                const brightness = (r * 299 + g * 587 + b * 114) / 1000; // Fórmula de luminosidade
+                
+                // A cor é considerada "brilhante" o suficiente se a luminosidade for maior que 128 (meio do caminho de 0-255)
+                // E se não estiver em existingColors
+                if (brightness > 128 && !existingColors.includes(newColor)) {
+                    return newColor;
+                }
+                attempts++;
+            } while (attempts < 200); // Limita as tentativas para evitar loops infinitos em casos extremos
+            
+            // Se não encontrar uma cor "brilhante" e distinta após muitas tentativas,
+            // retorna uma cor aleatória, mesmo que não seja ideal.
+            return getRandomColor();
+        }
+
+
+        /**
+         * Renderiza o gráfico de resumo dos gastos.
+         */
+        function renderChart() {
+            chartBarsDiv.innerHTML = '';
+            chartLegendDiv.innerHTML = '';
+
+            let totalExpensesValue = 0;
+            const categoryTotals = {};
+            const categoryColors = {}; // Para armazenar as cores geradas para cada categoria
+
+            // Inicializa os totais das categorias e as cores
+            categories.forEach(cat => {
+                categoryTotals[cat] = 0;
+                // Tenta manter a cor se já existir, senão gera uma nova
+                const storedColor = localStorage.getItem(`categoryColor_${cat}`);
+                if (storedColor) {
+                    categoryColors[cat] = storedColor;
+                } else {
+                    categoryColors[cat] = generateDistinctColor(Object.values(categoryColors));
+                    localStorage.setItem(`categoryColor_${cat}`, categoryColors[cat]);
+                }
+            });
+
+            // Calcula o total geral e os totais por categoria
+            expenses.forEach(expense => {
+                totalExpensesValue += expense.value;
+                if (categoryTotals[expense.category] !== undefined) {
+                    categoryTotals[expense.category] += expense.value;
+                } else {
+                    // Se a categoria do gasto não existir mais (ex: foi excluída), aloca para "Outros"
+                    categoryTotals[DEFAULT_CATEGORY] += expense.value;
+                    expense.category = DEFAULT_CATEGORY; // Atualiza o gasto para a categoria padrão
+                    saveExpenses(); // Salva a atualização
+                }
+            });
+
+            totalExpensesDisplay.textContent = formatCurrency(totalExpensesValue);
+
+            if (totalExpensesValue === 0) {
+                chartBarsDiv.innerHTML = '<p style="text-align: center; margin-top: 20px;">Nenhum gasto registrado para exibir o gráfico.</p>';
+                return;
+            }
+
+            // Cria as barras do gráfico e a legenda
+            const sortedCategories = Object.keys(categoryTotals).sort((a, b) => categoryTotals[b] - categoryTotals[a]);
+
+            sortedCategories.forEach(category => {
+                const total = categoryTotals[category];
+                const percentage = (total / totalExpensesValue) * 100;
+
+                if (percentage > 0) { // Só mostra categorias com gastos
+                    const barItem = document.createElement('div');
+                    barItem.className = 'chart-bar-item';
+                    barItem.innerHTML = `
+                        <span class="chart-bar-label">${category}:</span>
+                        <div class="chart-bar-container">
+                            <div class="chart-bar" style="background-color: ${categoryColors[category]}; width: ${percentage.toFixed(2)}%;"></div>
+                            <span class="chart-bar-overlay-text">${formatCurrency(total)} (${percentage.toFixed(1)}%)</span>
+                        </div>
+                    `;
+                    chartBarsDiv.appendChild(barItem);
+
+                    // Adiciona item à legenda
+                    const legendItem = document.createElement('div');
+                    legendItem.className = 'legend-item';
+                    legendItem.innerHTML = `
+                        <div class="legend-color-box" style="background-color: ${categoryColors[category]};"></div>
+                        <span>${category}</span>
+                    `;
+                    chartLegendDiv.appendChild(legendItem);
+                }
+            });
+        }
+
+        // --- Event Listeners ---
+
+        // Formulário de gastos
+        expenseForm.addEventListener('submit', addOrUpdateExpense);
+
+        // Botão de adicionar categoria
+        addCategoryBtn.addEventListener('click', addCategory);
+
+        // Filtros
+        filterCategorySelect.addEventListener('change', renderExpenses);
+        filterDateInput.addEventListener('change', renderExpenses);
+        clearFiltersBtn.addEventListener('click', () => {
+            filterCategorySelect.value = '';
+            filterDateInput.value = '';
+            renderExpenses();
+            showFeedback('Filtros limpos!', 'info');
+        });
+
+        // Botão de zerar dados
+        resetDataBtn.addEventListener('click', () => {
+            showConfirmationModal(
+                'Zerar Todos os Dados',
+                'Esta ação irá apagar TODOS os seus gastos. As categorias personalizadas serão mantidas. Tem certeza que deseja continuar?',
+                () => {
+                    localStorage.removeItem('expenses'); // Only remove expenses
+                    expenses = []; // Reset expenses array
+                    // categories array remains untouched
+                    // No need to saveCategories here as they are not changed
+                    renderExpenses(); // Re-render expenses (now empty)
+                    renderChart(); // Re-render chart (now empty)
+                    // No need to renderCategories as they are not affected
+                    showFeedback('Todos os gastos foram zerados!', 'success');
+                    hideConfirmationModal();
+                }
+            );
+        });
+
+        // Eventos do Modal de Confirmação
+        modalConfirmBtn.addEventListener('click', () => {
+            if (currentConfirmAction) {
+                currentConfirmAction(); // Executa a função armazenada
+            }
+        });
+
+        modalCancelBtn.addEventListener('click', hideConfirmationModal);
+
+        // --- Inicialização da Aplicação ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            renderCategories(); // Renderiza categorias antes dos gastos para preencher os selects
+            renderExpenses();
+            renderChart();
+
+            // Define a data atual como padrão no campo de data do formulário
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            expenseDateInput.value = `${year}-${month}-${day}`;
+        });
+    </script>
+</body>
+</html>
