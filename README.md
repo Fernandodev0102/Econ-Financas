@@ -1,4 +1,3 @@
-Econ-Financas: Evolução de um Gerenciador de Gastos Pessoais
 Este repositório documenta o avanço de um pequeno projeto de gerenciamento de gastos pessoais, desenvolvido com a assistência do Gemini AI. Meu objetivo é explorar e aprender a criar aplicações web simples utilizando prompts bem estruturados, focando na evolução das funcionalidades e da arquitetura do projeto.
 
 Estrutura do Repositório
