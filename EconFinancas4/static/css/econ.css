@@ -19,6 +19,13 @@
     --success-color: #28a745;
     --error-color: #dc3545;
     --info-color: #17a2b8;
+
+    /* Novas cores para saldo/orçamento */
+    --positive-balance: #4CAF50; /* Verde para saldo positivo */
+    --negative-balance: #FF6B6B; /* Vermelho para saldo negativo */
+    --neutral-balance: #B0B0B0; /* Cinza para saldo neutro/zero */
+    --blue-button: #007bff; /* Novo: Azul para o botão de edição */
+    --blue-button-dark: #0056b3; /* Novo: Azul mais escuro para hover */
 }
 
 /* Custom Scrollbar Styles (for Webkit browsers like Chrome, Edge, Safari) */
@@ -54,28 +61,27 @@ body {
     background-color: var(--primary-bg);
     color: var(--text-color);
     line-height: 1.6;
-    display: block; /* Changed to block for simpler centering of main-wrapper */
-    text-align: center; /* Center block-level children like main-wrapper */
-    min-height: 100vh;
-    padding: 20px;
+    display: flex; /* Usa flexbox para o body */
+    flex-direction: column; /* Empilha os filhos verticalmente */
+    align-items: center; /* Centraliza os filhos horizontalmente */
+    min-height: 100vh; /* Garante que o body ocupe a altura total da viewport */
+    padding: 20px; /* Padding ao redor do conteúdo principal */
+    overflow-x: hidden; /* Evita rolagem horizontal indesejada no body */
 }
 
 /* Novo wrapper principal para todo o conteúdo */
 .main-wrapper {
-    width: 100%;
-    max-width: 1200px; /* Same max-width as .container for alignment */
-    display: flex; /* Keep flex for internal column layout */
-    flex-direction: column; /* Stacks children vertically */
-    gap: 20px; /* Spacing between title, container, and reset button */
-    margin: 20px auto; /* Center the wrapper horizontally and add vertical margin */
-    padding: 0; /* Remove extra padding, as body has it */
-    text-align: left; /* Reset text-align for content inside main-wrapper */
+    width: 100%; /* Ocupa a largura total do pai (item flex do body) */
+    max-width: 1200px; /* Largura máxima para todo o conteúdo da aplicação */
+    display: flex;
+    flex-direction: column; /* Empilha título, container e botão verticalmente */
+    gap: 20px; /* Espaçamento entre essas seções principais */
 }
 
 h1, h2, h3 {
     color: var(--highlight-color);
-    text-align: center; /* Ensure title is centered within its parent */
-    margin-bottom: 0; /* Removed margin-bottom to let main-wrapper's gap control spacing */
+    text-align: center; /* Garante que o título esteja centralizado */
+    margin-bottom: 0; /* Deixa o gap do main-wrapper controlar o espaçamento */
 }
 
 /* Container principal do aplicativo (agora um filho do main-wrapper) */
@@ -83,17 +89,16 @@ h1, h2, h3 {
     background-color: var(--secondary-bg);
     border-radius: 12px;
     box-shadow: 0 8px 20px var(--shadow-medium);
-    width: 100%;
+    width: 100%; /* Ocupa a largura total do main-wrapper */
     padding: 30px;
-    overflow: hidden; /* Ensures shadow elements don't cause overflow */
     display: grid;
     gap: 20px;
-    grid-template-columns: 1fr; /* Default: single column for mobile */
+    grid-template-columns: 1fr; /* Padrão: coluna única para mobile */
 }
 
 @media (min-width: 768px) {
     .container {
-        grid-template-columns: 1fr 2fr; /* Two columns for tablets and desktops */
+        grid-template-columns: 1fr 1.8fr; /* Ajustado para 1fr 1.8fr para melhor equilíbrio */
     }
 }
 
@@ -101,7 +106,8 @@ h1, h2, h3 {
 .left-column, .right-column {
     display: flex;
     flex-direction: column;
-    gap: 20px; /* Space between cards within each column */
+    gap: 20px; /* Espaço entre os cards dentro de cada coluna */
+    min-width: 0; /* Permite que a coluna encolha e o overflow-x: auto do container funcione */
 }
 
 /* Card styles */
@@ -114,7 +120,7 @@ h1, h2, h3 {
     display: flex;
     flex-direction: column;
     gap: 15px;
-    flex-grow: 1; /* Allow cards to grow and fill available space in columns */
+    flex-grow: 1; /* Permite que os cards cresçam e preencham o espaço disponível nas colunas */
 }
 
 /* Form inputs */
@@ -142,13 +148,14 @@ textarea {
     color: var(--text-color);
     font-size: 1rem;
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
-    box-sizing: border-box; /* Ensures padding and border are included in the element's total width and height */
+    box-sizing: border-box; /* Garante que padding e border sejam incluídos na largura e altura total do elemento */
 }
 
 input[type="text"]:focus,
 input[type="number"]:focus,
 input[type="date"]:focus,
 select:focus,
+input[type="text"]:focus,
 textarea:focus {
     border-color: var(--highlight-color);
     outline: none;
@@ -187,7 +194,7 @@ button:active {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
-    justify-content: flex-start; /* Align buttons to start */
+    justify-content: flex-start; /* Alinha os botões ao início */
 }
 
 .btn-group button {
@@ -195,32 +202,43 @@ button:active {
     min-width: 120px;
 }
 
+/* Ajustes específicos para os botões de edição/exclusão de categoria */
+.category-list li button {
+    padding: 6px 10px; /* Reduz o padding */
+    font-size: 0.85rem; /* Reduz o tamanho da fonte */
+    min-width: unset; /* Remove min-width para permitir que encolham */
+    flex-grow: 0; /* Não permite que cresçam */
+}
+
 .btn-edit {
-    background-color: var(--light-text-color);
+    background-color: var(--blue-button); /* Azul para o botão de edição */
 }
 
 .btn-delete {
-    background-color: var(--negative-color);
+    background-color: var(--negative-color); /* Vermelho para o botão de exclusão */
 }
 
 .btn-edit:hover {
-    background-color: #8a8a8a;
+    background-color: var(--blue-button-dark); /* Azul mais escuro no hover */
 }
 
 .btn-delete:hover {
-    background-color: var(--negative-dark);
+    background-color: var(--negative-dark); /* Vermelho mais escuro no hover */
 }
 
 /* Tabela de Gastos */
 .expense-list-section {
-    overflow-x: auto; /* Allows horizontal scrolling for the table */
+    overflow-x: auto; /* Permite rolagem horizontal para a tabela */
+    width: 100%; /* Garante que a seção ocupe a largura total disponível */
+    max-height: 400px; /* Limita a altura da seção de gastos para evitar que ela seja gigantesca */
+    overflow-y: auto; /* Adiciona rolagem vertical se o conteúdo exceder a altura máxima */
 }
 
 .expense-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 20px;
-    /* min-width: 600px; Removido para permitir que a tabela seja mais flexível */
+    min-width: 600px; /* Mantém uma largura mínima para a tabela */
 }
 
 .expense-table th,
@@ -228,7 +246,6 @@ button:active {
     text-align: left;
     padding: 12px;
     border-bottom: 1px solid var(--border-color);
-    /* Removed white-space: nowrap; from here to allow text to wrap */
 }
 
 .expense-table th {
@@ -237,7 +254,7 @@ button:active {
     color: var(--secondary-bg);
     position: sticky;
     top: 0;
-    z-index: 1; /* Ensure header stays on top of scrolling content */
+    z-index: 1; /* Garante que o cabeçalho fique sobre o conteúdo rolante */
 }
 
 .expense-table tbody tr:nth-child(even) {
@@ -249,11 +266,11 @@ button:active {
 }
 
 .expense-table td:last-child {
-    white-space: nowrap; /* Keep this for the last cell to prevent buttons from wrapping */
-    display: flex; /* Make buttons flex container */
-    gap: 5px; /* Add small gap between buttons */
-    flex-wrap: wrap; /* Allow buttons to wrap if space is very limited */
-    justify-content: flex-end; /* Align buttons to the right */
+    white-space: nowrap; /* Mantém isso para a última célula para evitar que os botões quebrem linha */
+    display: flex; /* Torna os botões um contêiner flexível */
+    gap: 5px; /* Adiciona um pequeno espaçamento entre os botões */
+    flex-wrap: wrap; /* Permite que os botões quebrem linha se o espaço for muito limitado */
+    justify-content: flex-end; /* Alinha os botões à direita */
 }
 
 /* Mensagens de Feedback */
@@ -301,27 +318,91 @@ button:active {
     padding: 12px 18px;
     border-bottom: 1px solid var(--border-color);
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    gap: 10px;
+    gap: 10px; /* Espaço entre os principais itens */
+    flex-wrap: wrap; /* Permite que os itens quebrem linha em telas menores */
 }
 
 .category-list li:last-child {
     border-bottom: none;
 }
 
-.category-list li span {
-    flex-grow: 1;
+.category-list li span { /* Este é o nome da categoria */
+    flex-grow: 1; /* Permite que ele ocupe o espaço disponível */
+    flex-shrink: 1; /* Permite que ele encolha se necessário */
+    min-width: 100px; /* Garante uma largura mínima para o nome */
     font-weight: 500;
-    white-space: nowrap;
+    white-space: nowrap; /* Mantém o nome em uma única linha */
     overflow: hidden;
     text-overflow: ellipsis;
+    color: var(--text-color); /* Garante que a cor do texto seja visível */
 }
 
-.category-list li div {
-    display: flex;
-    gap: 8px;
+/* REMOVIDO: .category-list li .budget-info pois será movido para nova seção */
+/* .category-list li div { ... } */
+
+/* NEW SECTION: Balances and Budgets */
+.balances-summary-section {
+    margin-top: 20px; /* Add some space above this new section */
 }
+
+.category-balances-list {
+    list-style: none;
+    padding: 0;
+    margin-top: 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background-color: var(--primary-bg);
+    max-height: 300px; /* Limit height for scroll if many categories */
+    overflow-y: auto;
+}
+
+.category-balances-list li {
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.category-balances-list li:last-child {
+    border-bottom: none;
+}
+
+.category-balance-name {
+    font-weight: 600;
+    color: var(--text-color);
+    flex-basis: 100%; /* Occupy full width on small screens */
+    margin-bottom: 5px; /* Space below name on small screens */
+}
+
+@media (min-width: 480px) { /* Adjust for slightly larger mobile screens */
+    .category-balance-name {
+        flex-basis: auto; /* Allow name to take less width */
+        margin-bottom: 0;
+        flex-grow: 1; /* Let it grow */
+    }
+}
+
+.category-balance-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    flex-grow: 1;
+    justify-content: flex-end; /* Align details to the right */
+    font-size: 0.95em;
+    color: var(--light-text-color);
+}
+
+.category-balance-details span {
+    white-space: nowrap; /* Keep values on one line */
+}
+
+.category-balance-details .remaining-value {
+    font-weight: 700;
+}
+
 
 /* Gráfico de Resumo */
 .chart-section {
@@ -349,6 +430,20 @@ button:active {
     font-weight: 700;
     color: var(--text-color);
 }
+
+/* Styles for total remaining balance (positive/negative) */
+.chart-summary p.positive {
+    color: var(--positive-balance);
+}
+
+.chart-summary p.negative {
+    color: var(--negative-balance);
+}
+
+.chart-summary p.neutral {
+    color: var(--neutral-balance);
+}
+
 
 .chart-bars {
     display: flex;
@@ -405,6 +500,31 @@ button:active {
     text-align: center;
 }
 
+/* New style for budget line in chart */
+.budget-line {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    width: 2px; /* Espessura da linha */
+    background-color: var(--light-text-color); /* Cor da linha */
+    border-left: 1px dashed var(--light-text-color); /* Linha tracejada para o orçamento */
+    box-sizing: border-box;
+    z-index: 1; /* Abaixo do texto de sobreposição */
+}
+
+.budget-label-text {
+    position: absolute;
+    top: -15px; /* Posição acima da barra */
+    transform: translateX(-50%);
+    color: var(--light-text-color);
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+    z-index: 3; /* Acima da barra e da linha */
+    text-shadow: 0 0 3px rgba(0,0,0,0.8); /* Adiciona sombra para legibilidade */
+}
+
+
 .chart-legend {
     margin-top: 20px;
     display: flex;
@@ -429,7 +549,7 @@ button:active {
 
 /* Modal de Confirmação */
 .modal {
-    display: none; /* Hidden by default */
+    /* display: none; */ /* REMOVIDO: Controlado por JS para evitar conflitos */
     position: fixed;
     z-index: 1001;
     left: 0;
@@ -443,12 +563,13 @@ button:active {
     opacity: 0;
     transition: opacity 0.3s ease-in-out;
     pointer-events: none;
+    display: none; /* Adicionado para garantir que ele esteja oculto por padrão */
 }
 
 .modal.show {
     opacity: 1;
     pointer-events: auto;
-    display: flex; /* Ensure it becomes flex when shown */
+    display: flex; /* Garante que se torne flex quando mostrado */
 }
 
 .modal-content {
@@ -497,7 +618,7 @@ button:active {
 /* Filtros */
 .filter-section {
     display: grid;
-    grid-template-columns: 1fr; /* Default: single column for filters */
+    grid-template-columns: 1fr; /* Padrão: coluna única para filtros */
     gap: 15px;
     margin-bottom: 20px;
     padding: 15px;
@@ -506,7 +627,7 @@ button:active {
     border: 1px solid var(--border-color);
 }
 
-@media (min-width: 768px) { /* Apply multi-column filter layout only when container is also multi-column */
+@media (min-width: 768px) { /* Aplica layout de filtro multi-coluna apenas quando o container também é multi-coluna */
     .filter-section {
         grid-template-columns: 1fr 1fr auto;
     }
@@ -520,7 +641,7 @@ button:active {
     max-width: 1200px; /* Limita a largura máxima para alinhar com o container */
     margin-left: auto; /* Centraliza o botão */
     margin-right: auto; /* Centraliza o botão */
-    display: block; /* Ensure it's a block element for margin: auto to work */
+    display: block; /* Garante que seja um elemento de bloco para margin: auto funcionar */
 }
 .reset-data-button:hover {
     background-color: var(--negative-dark);

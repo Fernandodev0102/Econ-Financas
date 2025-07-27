@@ -15,16 +15,21 @@ const expenseTableBody = document.getElementById('expense-table-body');
 const feedbackMessage = document.getElementById('feedback-message');
 
 const newCategoryNameInput = document.getElementById('new-category-name');
+const newCategoryBudgetInput = document.getElementById('new-category-budget'); // New budget input
 const addCategoryBtn = document.getElementById('add-category-btn');
 const categoryListUl = document.getElementById('category-list');
 
 const totalExpensesDisplay = document.getElementById('total-expenses');
+const totalBudgetDisplay = document.getElementById('total-budget'); // New total budget display
+const totalRemainingBalanceDisplay = document.getElementById('total-remaining-balance'); // New total remaining balance display
+const categoryBalancesList = document.getElementById('category-balances-list'); // New element for category balances
+
 const chartBarsDiv = document.getElementById('chart-bars');
 const chartLegendDiv = document.getElementById('chart-legend');
 
 const filterCategorySelect = document.getElementById('filter-category');
 const filterDateInput = document.getElementById('filter-date');
-const clearFiltersBtn = document.getElementById('clear-filters-btn');
+const clearFiltersBtn = document.getElementById('clear-filters-btn'); // Corrected ID for reset filter button
 
 const resetDataBtn = document.getElementById('reset-data-btn');
 
@@ -123,17 +128,25 @@ function generateDistinctColor(existingColors) {
  * @param {Function} onConfirm - Function to execute if the user confirms.
  */
 function showConfirmationModal(title, message, onConfirm) {
+    console.log("showConfirmationModal called with title:", title);
     modalTitle.innerHTML = title;
     modalMessage.innerHTML = message;
     currentConfirmAction = onConfirm;
     confirmationModal.classList.add('show');
+    // Ensure modal is visible and interactive
+    confirmationModal.style.display = 'flex'; // Force display flex for visibility
+    confirmationModal.style.pointerEvents = 'auto'; // Ensure it's clickable
 }
 
 /**
  * Hides the confirmation modal.
  */
 function hideConfirmationModal() {
+    console.log("hideConfirmationModal called");
     confirmationModal.classList.remove('show');
+    // Ensure modal is hidden and not interactive
+    confirmationModal.style.display = 'none'; // Force display none for hiding
+    confirmationModal.style.pointerEvents = 'none'; // Prevent clicks
     currentConfirmAction = null;
 }
 
@@ -174,7 +187,8 @@ async function fetchExpenses(category = '', date = '') {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         return await response.json();
-    } catch (error) {
+    }
+    catch (error) {
         console.error('Error fetching expenses:', error);
         showFeedback('Erro ao carregar gastos.', 'error');
         return [];
@@ -278,10 +292,12 @@ async function editExpense(id) {
  * @param {string} id - The ID of the expense to be deleted.
  */
 function deleteExpense(id) {
+    console.log("deleteExpense called for ID:", id);
     showConfirmationModal(
         'Confirmar Exclusão',
         'Tem certeza que deseja excluir este gasto?',
         async () => {
+            console.log("Confirming delete for expense ID:", id);
             try {
                 const response = await fetch(`/api/expenses/${id}`, {
                     method: 'DELETE'
@@ -296,7 +312,7 @@ function deleteExpense(id) {
                 showFeedback('Erro ao excluir gasto.', 'error');
             } finally {
                 await initializeDataAndRender(); // Re-fetch all data and render
-                hideConfirmationModal();
+                hideConfirmationModal(); // Ensure modal is hidden
             }
         }
     );
@@ -349,8 +365,14 @@ function renderExpenses() {
  */
 async function addCategory() {
     const newCategoryName = newCategoryNameInput.value.trim();
+    const newCategoryBudget = parseFloat(newCategoryBudgetInput.value);
+
     if (!newCategoryName) {
         showFeedback('Por favor, insira um nome para a categoria.', 'error');
+        return;
+    }
+    if (isNaN(newCategoryBudget) || newCategoryBudget < 0) {
+        showFeedback('Por favor, insira um orçamento válido (número não negativo).', 'error');
         return;
     }
 
@@ -358,12 +380,13 @@ async function addCategory() {
         const response = await fetch('/api/categories', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: newCategoryName })
+            body: JSON.stringify({ name: newCategoryName, budget: newCategoryBudget })
         });
 
         if (response.ok) {
             showFeedback(`Categoria "${newCategoryName}" adicionada!`, 'success');
             newCategoryNameInput.value = '';
+            newCategoryBudgetInput.value = '0.00'; // Reset budget input
         } else if (response.status === 409) {
             showFeedback('Essa categoria já existe.', 'info');
         } else {
@@ -378,31 +401,45 @@ async function addCategory() {
 }
 
 /**
- * Renames an existing category via the backend API.
+ * Renames an existing category and updates its budget via the backend API.
  * @param {number} categoryId - The ID of the category to rename.
  * @param {string} oldName - The old name of the category.
+ * @param {number} oldBudget - The old budget of the category.
  * @param {string} newName - The new name for the category.
+ * @param {number} newBudget - The new budget for the category.
  */
-async function renameCategory(categoryId, oldName, newName) {
-    if (oldName === newName) return; // No change
+async function renameCategory(categoryId, oldName, oldBudget, newName, newBudget) {
+    // Ensure newBudget is a number, default to 0 if not
+    newBudget = typeof newBudget === 'number' ? newBudget : 0;
+
+    // Only proceed if name or budget has changed
+    if (oldName === newName && oldBudget === newBudget) {
+        showFeedback('Nenhuma alteração detectada.', 'info');
+        return;
+    }
+
+    if (isNaN(newBudget) || newBudget < 0) {
+        showFeedback('Por favor, insira um orçamento válido (número não negativo).', 'error');
+        return;
+    }
 
     try {
         const response = await fetch(`/api/categories/${categoryId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: newName })
+            body: JSON.stringify({ name: newName, budget: newBudget })
         });
 
         if (response.ok) {
-            showFeedback(`Categoria "${oldName}" renomeada para "${newName}"!`, 'success');
+            showFeedback(`Categoria "${oldName}" renomeada para "${newName}" e orçamento atualizado!`, 'success');
         } else if (response.status === 409) {
             showFeedback('Já existe uma categoria com esse nome.', 'error');
         } else {
-            throw new Error('Failed to rename category');
+            throw new Error('Failed to rename/update category');
         }
     } catch (error) {
-        console.error('Error renaming category:', error);
-        showFeedback('Erro ao renomear categoria.', 'error');
+        console.error('Error renaming/updating category:', error);
+        showFeedback('Erro ao renomear/atualizar categoria.', 'error');
     } finally {
         await initializeDataAndRender(); // Re-fetch all data and render
     }
@@ -414,6 +451,7 @@ async function renameCategory(categoryId, oldName, newName) {
  * @param {string} categoryNameToDelete - The name of the category to be deleted.
  */
 function deleteCategory(categoryIdToDelete, categoryNameToDelete) {
+    console.log("deleteCategory called for ID:", categoryIdToDelete, "Name:", categoryNameToDelete);
     if (categoryNameToDelete === DEFAULT_CATEGORY_NAME) {
         showFeedback(`A categoria "${DEFAULT_CATEGORY_NAME}" não pode ser excluída.`, 'error');
         return;
@@ -423,6 +461,7 @@ function deleteCategory(categoryIdToDelete, categoryNameToDelete) {
         'Confirmar Exclusão de Categoria',
         `Tem certeza que deseja excluir a categoria "${categoryNameToDelete}"? Os gastos associados serão movidos para "${DEFAULT_CATEGORY_NAME}".`,
         async () => {
+            console.log("Confirming delete for category ID:", categoryIdToDelete);
             try {
                 const response = await fetch(`/api/categories/${categoryIdToDelete}`, {
                     method: 'DELETE'
@@ -437,7 +476,7 @@ function deleteCategory(categoryIdToDelete, categoryNameToDelete) {
                 showFeedback('Erro ao excluir categoria.', 'error');
             } finally {
                 await initializeDataAndRender(); // Re-fetch all data and render
-                hideConfirmationModal();
+                hideConfirmationModal(); // Ensure modal is hidden
             }
         }
     );
@@ -445,8 +484,10 @@ function deleteCategory(categoryIdToDelete, categoryNameToDelete) {
 
 /**
  * Renders the list of categories and populates category selects.
+ * Updated for EconFinancas 4 to NOT show budget and remaining in this list.
  */
 function renderCategories() {
+    console.log("renderCategories called. Categories:", categories);
     // Clear existing lists and selects
     categoryListUl.innerHTML = '';
     expenseCategorySelect.innerHTML = '';
@@ -465,17 +506,19 @@ function renderCategories() {
         filterOption.textContent = category.name;
         filterCategorySelect.appendChild(filterOption);
 
-        // Add to category management list
+        // Add to category management list (without budget info here)
         const li = document.createElement('li');
+        // Ensure category.budget is a number, default to 0 if not
+        const currentBudget = typeof category.budget === 'number' ? category.budget : 0;
         li.innerHTML = `
-            <span>${category.name}</span>
+            <span>${category.name || 'Nome Inválido'}</span> <!-- Ensure name is displayed -->
             <div>
-                <button class="btn-edit" onclick="promptRenameCategory(${category.id}, '${category.name}')">Renomear</button>
+                <button class="btn-edit" onclick="promptRenameCategory(${category.id}, '${category.name}', ${currentBudget})">Editar</button>
                 <button class="btn-delete" onclick="deleteCategory(${category.id}, '${category.name}')">Excluir</button>
             </div>
         `;
         if (category.name === DEFAULT_CATEGORY_NAME) {
-            // Disable rename/delete buttons for the default category
+            // Disable buttons for the default category
             li.querySelector('.btn-edit').disabled = true;
             li.querySelector('.btn-delete').disabled = true;
             li.querySelector('.btn-edit').style.opacity = '0.5';
@@ -488,84 +531,159 @@ function renderCategories() {
 }
 
 /**
- * Prompts the user for a new name for the category.
- * @param {number} categoryId - The ID of the category.
- * @param {string} oldName - The current name of the category.
+ * Renders the overall and per-category balances and budgets.
  */
-function promptRenameCategory(categoryId, oldName) {
-    showConfirmationModal(
-        'Renomear Categoria',
-        `Insira o novo nome para "${oldName}":<br><input type="text" id="new-category-input" value="${oldName}" style="margin-top: 10px; width: calc(100% - 24px);">`,
-        async () => {
-            const newNameInput = document.getElementById('new-category-input');
-            const newName = newNameInput.value.trim();
-            if (newName) {
-                await renameCategory(categoryId, oldName, newName);
-            } else {
-                showFeedback('O novo nome da categoria não pode ser vazio.', 'error');
+function renderBalancesSummary() {
+    console.log("renderBalancesSummary called. Expenses:", expenses, "Categories:", categories);
+    categoryBalancesList.innerHTML = ''; // Clear previous entries
+
+    let totalExpensesValue = 0;
+    let totalBudgetValue = 0;
+    const categoryTotals = {}; // { categoryName: { spent: 0, budget: 0 } }
+
+    // Initialize category totals with budget
+    categories.forEach(cat => {
+        // Ensure budget is a number, default to 0 if not
+        const budget = typeof cat.budget === 'number' ? cat.budget : 0;
+        categoryTotals[cat.name] = { spent: 0, budget: budget };
+        totalBudgetValue += budget;
+    });
+
+    // Sum up expenses per category
+    expenses.forEach(exp => {
+        if (categoryTotals[exp.category]) {
+            categoryTotals[exp.category].spent += exp.value;
+        } else {
+            // Fallback for expenses whose category might have been deleted
+            // This should be rare if backend reallocates
+            const defaultCat = categories.find(c => c.name === DEFAULT_CATEGORY_NAME);
+            if (defaultCat) {
+                categoryTotals[DEFAULT_CATEGORY_NAME].spent += exp.value;
             }
-            hideConfirmationModal();
         }
-    );
+        totalExpensesValue += exp.value;
+    });
+
+    // Update global summary displays
+    totalExpensesDisplay.textContent = formatCurrency(totalExpensesValue);
+    totalBudgetDisplay.textContent = formatCurrency(totalBudgetValue);
+    const totalRemaining = totalBudgetValue - totalExpensesValue;
+    totalRemainingBalanceDisplay.textContent = formatCurrency(totalRemaining);
+
+    // Apply color based on total remaining balance
+    totalRemainingBalanceDisplay.classList.remove('positive', 'negative', 'neutral');
+    if (totalRemaining < 0) {
+        totalRemainingBalanceDisplay.classList.add('negative');
+    } else if (totalRemaining > 0) {
+        totalRemainingBalanceDisplay.classList.add('positive');
+    } else {
+        totalRemainingBalanceDisplay.classList.add('neutral');
+    }
+
+    // Render per-category balances
+    // Sort categories by name for consistent display
+    const sortedCategoryNames = Object.keys(categoryTotals).sort();
+
+    if (sortedCategoryNames.length === 0) {
+        categoryBalancesList.innerHTML = '<li class="no-balances-message">Nenhuma categoria ou gasto para exibir saldos.</li>';
+        return;
+    }
+
+    sortedCategoryNames.forEach(categoryName => {
+        const catData = categoryTotals[categoryName];
+        const spent = catData.spent;
+        const budget = catData.budget;
+        const remaining = budget - spent;
+
+        let remainingClass = 'neutral';
+        if (remaining < 0) {
+            remainingClass = 'negative';
+        } else if (remaining > 0) {
+            remainingClass = 'positive';
+        }
+
+        const listItem = document.createElement('li');
+        listItem.className = 'category-balance-item'; // Add a class for styling
+        listItem.innerHTML = `
+            <span class="category-balance-name">${categoryName}:</span>
+            <div class="category-balance-details">
+                <span class="budget-value">Orçamento: ${formatCurrency(budget)}</span>
+                <span class="spent-value">Gasto: ${formatCurrency(spent)}</span>
+                <span class="remaining-value ${remainingClass}">Restante: ${formatCurrency(remaining)}</span>
+            </div>
+        `;
+        categoryBalancesList.appendChild(listItem);
+    });
 }
+
 
 // --- Chart and Summary Functions ---
 
 /**
  * Renders the expense summary chart.
+ * This function now focuses purely on the chart visualization.
  */
 function renderChart() {
+    console.log("renderChart called. Expenses:", expenses, "Categories:", categories);
     chartBarsDiv.innerHTML = '';
     chartLegendDiv.innerHTML = '';
 
-    let totalExpensesValue = 0;
-    const categoryTotals = {};
-    const categoryColors = {}; // To store generated colors for each category
+    let totalExpensesValueForChart = 0; // Use a separate total for chart calculations
+    let totalBudgetValueForChart = 0;
+    const categoryTotalsForChart = {}; // { categoryName: { spent: 0, budget: 0 } }
 
-    // Initialize category totals and assign/reuse colors
+    // Initialize category totals with budget for chart
     categories.forEach(cat => {
-        categoryTotals[cat.name] = 0;
-        // Simple color assignment for now, could be more sophisticated
+        // Ensure budget is a number, default to 0 if not
+        const budget = typeof cat.budget === 'number' ? cat.budget : 0;
+        categoryTotalsForChart[cat.name] = { spent: 0, budget: budget };
+        totalBudgetValueForChart += budget;
         if (!categoryColors[cat.name]) {
             categoryColors[cat.name] = generateDistinctColor(Object.values(categoryColors));
         }
     });
 
-    // Calculate total expenses and totals per category
+    // Sum up expenses per category for chart
     expenses.forEach(expense => {
-        totalExpensesValue += expense.value;
-        if (categoryTotals[expense.category] !== undefined) {
-            categoryTotals[expense.category] += expense.value;
+        totalExpensesValueForChart += expense.value;
+        if (categoryTotalsForChart[expense.category]) {
+            categoryTotalsForChart[expense.category].spent += expense.value;
         } else {
-            // If expense category doesn't exist (e.g., deleted), reallocate to default
-            categoryTotals[DEFAULT_CATEGORY_NAME] += expense.value;
-            // Note: The backend handles reallocation on category deletion, so this client-side
-            // reallocation is more of a fallback for display consistency.
+            const defaultCat = categories.find(c => c.name === DEFAULT_CATEGORY_NAME);
+            if (defaultCat) {
+                categoryTotalsForChart[DEFAULT_CATEGORY_NAME].spent += expense.value;
+            }
         }
     });
 
-    totalExpensesDisplay.textContent = formatCurrency(totalExpensesValue);
-
-    if (totalExpensesValue === 0) {
-        chartBarsDiv.innerHTML = '<p style="text-align: center; margin-top: 20px;">Nenhum gasto registrado para exibir o gráfico.</p>';
+    if (totalExpensesValueForChart === 0 && totalBudgetValueForChart === 0) {
+        chartBarsDiv.innerHTML = '<p style="text-align: center; margin-top: 20px;">Nenhum gasto ou orçamento registrado para exibir o gráfico.</p>';
         return;
     }
 
     // Create chart bars and legend
-    const sortedCategories = Object.keys(categoryTotals).sort((a, b) => categoryTotals[b] - categoryTotals[a]);
+    // Sort by spent amount for chart visualization
+    const sortedCategoryNames = Object.keys(categoryTotalsForChart).sort((a, b) => categoryTotalsForChart[b].spent - categoryTotalsForChart[a].spent);
 
-    sortedCategories.forEach(categoryName => {
-        const total = categoryTotals[categoryName];
-        const percentage = (total / totalExpensesValue) * 100;
+    sortedCategoryNames.forEach(categoryName => {
+        const catData = categoryTotalsForChart[categoryName];
+        const spent = catData.spent;
+        const budget = catData.budget;
+        const totalForPercentage = Math.max(spent, budget, 1); // Use max of spent/budget to ensure bar is relative, avoid division by zero
 
-        if (percentage > 0) { // Only show categories with expenses
+        const spentPercentage = (spent / totalForPercentage) * 100;
+        const budgetPercentage = (budget / totalForPercentage) * 100;
+
+        // Only show categories with either spent amount or a defined budget
+        if (spent > 0 || budget > 0) {
             const barItem = document.createElement('div');
             barItem.className = 'chart-bar-item';
             barItem.innerHTML = `
                 <span class="chart-bar-label">${categoryName}:</span>
                 <div class="chart-bar-container">
-                    <div class="chart-bar" style="background-color: ${categoryColors[categoryName]}; width: ${percentage.toFixed(2)}%;"></div>
-                    <span class="chart-bar-overlay-text">${formatCurrency(total)} (${percentage.toFixed(1)}%)</span>
+                    <div class="chart-bar" style="background-color: ${categoryColors[categoryName]}; width: ${spentPercentage.toFixed(2)}%;"></div>
+                    <span class="chart-bar-overlay-text">Gasto: ${formatCurrency(spent)}</span>
+                    ${budget > 0 ? `<div class="budget-line" style="left: ${budgetPercentage.toFixed(2)}%;"></div><span class="budget-label-text" style="left: ${budgetPercentage.toFixed(2)}%;">Orçamento: ${formatCurrency(budget)}</span>` : ''}
                 </div>
             `;
             chartBarsDiv.appendChild(barItem);
@@ -574,13 +692,19 @@ function renderChart() {
             const legendItem = document.createElement('div');
             legendItem.className = 'legend-item';
             legendItem.innerHTML = `
-                <div class="legend-color-box" style="background-color: ${categoryColors[categoryName]};"></div>
-                <span>${categoryName}</span>
+                <div class="legend-color-box" style="background-color: transparent; border: 1px dashed ${varToString('--light-text-color')};"></div>
+                <span>Orçamento (Linha tracejada)</span>
             `;
             chartLegendDiv.appendChild(legendItem);
         }
     });
 }
+
+// Helper to get CSS variable value (for budget line legend)
+function varToString(variableName) {
+    return getComputedStyle(document.documentElement).getPropertyValue(variableName).trim();
+}
+
 
 // --- Initialization and Event Listeners ---
 
@@ -588,25 +712,30 @@ function renderChart() {
  * Initializes data by fetching from API and renders all UI components.
  */
 async function initializeDataAndRender() {
+    console.log("initializeDataAndRender called.");
     categories = await fetchCategories();
     // Ensure default category exists in the fetched list for client-side logic
-    if (!categories.some(cat => cat.name === DEFAULT_CATEGORY_NAME)) {
-        // This scenario should ideally be handled by backend initialization,
-        // but adding a fallback here.
-        // If the default category is missing, we should create it on the backend.
-        // For this demo, we assume it's created by Flask's db.create_all() block.
-        // If not, a user action (like adding a category) might trigger its creation.
-        // For now, we'll just ensure it's in the client-side list if somehow missing.
-        // This client-side addition won't persist to the DB unless explicitly added.
-        // A more robust solution would be to ensure backend creates it.
-        // For this project, the app.py creates it automatically.
-    }
-    renderCategories(); // Render categories first to populate selects
-
+    // This check is important if the DB is empty and app.py doesn't auto-populate.
+    // However, app.py's init_db() function should be used for this.
+    // We'll rely on the manual init_db() for initial population.
+    
+    renderCategories(); // Render categories list (without budget info)
+    
     expenses = await fetchExpenses(filterCategorySelect.value, filterDateInput.value);
-    renderExpenses();
-    renderChart();
+    
+    renderBalancesSummary(); // Render the new balances and budgets section
+    renderChart(); // Render the chart
 }
+
+// Event listeners for confirmation modal buttons
+modalConfirmBtn.addEventListener('click', () => {
+    if (currentConfirmAction) {
+        currentConfirmAction(); // Execute the stored function
+    }
+});
+
+modalCancelBtn.addEventListener('click', hideConfirmationModal);
+
 
 // Expense form submission
 expenseForm.addEventListener('submit', addOrUpdateExpense);
@@ -650,14 +779,6 @@ resetDataBtn.addEventListener('click', () => {
     );
 });
 
-// Confirmation Modal events
-modalConfirmBtn.addEventListener('click', () => {
-    if (currentConfirmAction) {
-        currentConfirmAction(); // Execute the stored function
-    }
-});
-
-modalCancelBtn.addEventListener('click', hideConfirmationModal);
 
 // Initial application load
 document.addEventListener('DOMContentLoaded', async () => {

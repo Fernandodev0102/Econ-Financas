@@ -47,8 +47,12 @@
                 <section class="card category-management">
                     <h2>Gerenciar Categorias</h2>
                     <div class="form-group">
-                        <label for="new-category-name">Nova Categoria:</label>
+                        <label for="new-category-name">Nome da Categoria:</label>
                         <input type="text" id="new-category-name" placeholder="Nome da categoria">
+                    </div>
+                    <div class="form-group">
+                        <label for="new-category-budget">Orçamento Mensal (R$):</label>
+                        <input type="number" id="new-category-budget" placeholder="0.00" step="0.01" value="0.00">
                     </div>
                     <div class="btn-group">
                         <button id="add-category-btn">Adicionar Categoria</button>
@@ -101,16 +105,34 @@
 
                 <section class="card chart-section">
                     <h2>Resumo dos Gastos</h2>
-                    <div class="chart-summary">
-                        <h3>Total Geral:</h3>
-                        <p id="total-expenses">R$ 0,00</p>
-                    </div>
                     <div id="chart-bars" class="chart-bars">
                         <!-- Chart bars will be loaded via JS -->
                     </div>
                     <div id="chart-legend" class="chart-legend">
                         <!-- Chart legend will be loaded via JS -->
                     </div>
+                </section>
+
+                <!-- NEW SECTION: Balances and Budgets -->
+                <section class="card balances-summary-section">
+                    <h2>Saldos e Orçamentos</h2>
+                    <div class="chart-summary">
+                        <h3>Total Geral Gasto:</h3>
+                        <p id="total-expenses">R$ 0,00</p>
+                    </div>
+                    <div class="chart-summary">
+                        <h3>Orçamento Total:</h3>
+                        <p id="total-budget">R$ 0,00</p>
+                    </div>
+                    <div class="chart-summary">
+                        <h3>Saldo Total Restante:</h3>
+                        <p id="total-remaining-balance">R$ 0,00</p>
+                    </div>
+                    
+                    <h3>Saldos por Categoria</h3>
+                    <ul id="category-balances-list" class="category-balances-list">
+                        <!-- Category balances will be loaded via JS -->
+                    </ul>
                 </section>
             </div>
         </div>

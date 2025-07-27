@@ -1,7 +1,6 @@
 import os
 from flask import Flask, render_template, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 import uuid
 from datetime import datetime
 
@@ -21,9 +20,11 @@ db = SQLAlchemy(app)
 class Category(db.Model):
     """
     Represents a spending category in the database.
+    Added 'budget' field for EconFinancas 4.
     """
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)
+    budget = db.Column(db.Float, default=0.0, nullable=False) # New field for budget
     # Relationship to Expense: 'backref' creates a 'category' attribute on Expense objects
     expenses = db.relationship('Expense', backref='category_obj', lazy=True)
 
@@ -34,7 +35,8 @@ class Category(db.Model):
         """Converts the Category object to a dictionary."""
         return {
             'id': self.id,
-            'name': self.name
+            'name': self.name,
+            'budget': self.budget # Include budget in dictionary
         }
 
 class Expense(db.Model):
@@ -75,6 +77,7 @@ def index():
 def handle_categories():
     """
     Handles GET requests to retrieve all categories and POST requests to add a new category.
+    Updated for EconFinancas 4 to handle 'budget'.
     """
     if request.method == 'GET':
         categories = Category.query.all()
@@ -82,12 +85,21 @@ def handle_categories():
     elif request.method == 'POST':
         data = request.get_json()
         name = data.get('name')
+        budget = data.get('budget', 0.0) # Default budget to 0 if not provided
+
         if not name:
             return jsonify({'error': 'Category name is required'}), 400
         if Category.query.filter_by(name=name).first():
             return jsonify({'error': 'Category with this name already exists'}), 409
 
-        new_category = Category(name=name)
+        try:
+            budget = float(budget)
+            if budget < 0:
+                return jsonify({'error': 'Budget cannot be negative'}), 400
+        except ValueError:
+            return jsonify({'error': 'Invalid budget format'}), 400
+
+        new_category = Category(name=name, budget=budget)
         db.session.add(new_category)
         db.session.commit()
         return jsonify(new_category.to_dict()), 201
@@ -96,6 +108,7 @@ def handle_categories():
 def handle_category(category_id):
     """
     Handles PUT requests to update a category and DELETE requests to remove a category.
+    Updated for EconFinancas 4 to handle 'budget'.
     """
     category = Category.query.get(category_id)
     if not category:
@@ -104,10 +117,21 @@ def handle_category(category_id):
     if request.method == 'PUT':
         data = request.get_json()
         new_name = data.get('name')
+        new_budget = data.get('budget') # Can be None if not sent
+
         if not new_name:
             return jsonify({'error': 'New category name is required'}), 400
         if Category.query.filter_by(name=new_name).first() and new_name != category.name:
             return jsonify({'error': 'Category with this name already exists'}), 409
+
+        if new_budget is not None:
+            try:
+                new_budget = float(new_budget)
+                if new_budget < 0:
+                    return jsonify({'error': 'Budget cannot be negative'}), 400
+                category.budget = new_budget
+            except ValueError:
+                return jsonify({'error': 'Invalid budget format'}), 400
 
         category.name = new_name
         db.session.commit()
@@ -118,7 +142,8 @@ def handle_category(category_id):
         default_category = Category.query.filter_by(name='Outros').first()
         if not default_category:
             # If 'Outros' doesn't exist, create it. This should ideally be handled during initial setup.
-            default_category = Category(name='Outros')
+            # We add a default budget here as well.
+            default_category = Category(name='Outros', budget=0.0)
             db.session.add(default_category)
             db.session.commit() # Commit to get an ID for default_category
 
@@ -178,11 +203,10 @@ def handle_expenses():
         # Find or create category
         category = Category.query.filter_by(name=category_name).first()
         if not category:
-            # This case should ideally not happen if categories are pre-loaded or added via UI
-            # For robustness, we can create it or default to 'Outros'
+            # For robustness, if category doesn't exist, default to 'Outros'
             default_category = Category.query.filter_by(name='Outros').first()
             if not default_category:
-                default_category = Category(name='Outros')
+                default_category = Category(name='Outros', budget=0.0) # Ensure default budget
                 db.session.add(default_category)
                 db.session.commit()
             category = default_category # Assign to default category if provided category doesn't exist
@@ -252,37 +276,34 @@ def reset_data():
         db.session.rollback()
         return jsonify({'error': f'Failed to reset data: {str(e)}'}), 500
 
-# --- Database Initialization (Run this once to create tables) ---
-# To run this, open a Python shell in your project directory:
-# > python
-# > from app import app, db
-# > with app.app_context():
-# >     db.create_all()
-# >     # Optional: Add default categories if they don't exist
-# >     if not Category.query.filter_by(name='Alimentação').first():
-# >         db.session.add(Category(name='Alimentação'))
-# >         db.session.add(Category(name='Transporte'))
-# >         db.session.add(Category(name='Lazer'))
-# >         db.session.add(Category(name='Moradia'))
-# >         db.session.add(Category(name='Saúde'))
-# >         db.session.add(Category(name='Educação'))
-# >         db.session.add(Category(name='Outros'))
-# >         db.session.commit()
-# > exit()
+# --- Function to Initialize Database (Manual Call Only) ---
+# This function is now separate and should be called manually in a Python shell
+# when you need to create/recreate the database schema and populate initial data.
+def init_db():
+    with app.app_context():
+        # WARNING: db.drop_all() will delete all data! Use with caution.
+        # It's here for development convenience to reset the database.
+        db.drop_all()
+        db.create_all()
+
+        # Add default categories if they don't exist
+        # This check is important if init_db() is called multiple times
+        # without a preceding drop_all()
+        if not Category.query.filter_by(name='Alimentação').first():
+            db.session.add(Category(name='Alimentação', budget=0.0))
+            db.session.add(Category(name='Transporte', budget=0.0))
+            db.session.add(Category(name='Lazer', budget=0.0))
+            db.session.add(Category(name='Moradia', budget=0.0))
+            db.session.add(Category(name='Saúde', budget=0.0))
+            db.session.add(Category(name='Educação', budget=0.0))
+            db.session.add(Category(name='Outros', budget=0.0))
+            db.session.commit()
+            print("Default categories added.")
+        else:
+            print("Default categories already exist.")
 
 if __name__ == '__main__':
     # This block is for direct execution and development.
     # In a production environment, you'd typically use a WSGI server (e.g., Gunicorn).
-    with app.app_context():
-        db.create_all()
-        # Add default categories if they don't exist on initial setup
-        if not Category.query.filter_by(name='Alimentação').first():
-            db.session.add(Category(name='Alimentação'))
-            db.session.add(Category(name='Transporte'))
-            db.session.add(Category(name='Lazer'))
-            db.session.add(Category(name='Moradia'))
-            db.session.add(Category(name='Saúde'))
-            db.session.add(Category(name='Educação'))
-            db.session.add(Category(name='Outros'))
-            db.session.commit()
+    # We no longer call init_db() automatically here to avoid unintended data loss.
     app.run(debug=True) # debug=True enables auto-reloading and better error messages
